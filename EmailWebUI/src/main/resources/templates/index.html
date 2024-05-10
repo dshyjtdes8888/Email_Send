@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Sender</title>
+  <script src="https://cdn.staticfile.org/jquery/2.2.4/jquery.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+<h1>Email Sender</h1>
+<form id="emailForm">
+  <label for="email">邮箱：</label>
+  <input type="text" id="email" name="email" required><br><br>
+  <div>需要批量发送时，请用英文逗号隔开收件人邮箱</div>
+
+  <label for="emailTitle">邮件标题：</label>
+  <input type="text" id="emailTitle" name="emailTitle" required><br><br>
+
+  <label for="emailContent">邮件内容：</label><br>
+  <textarea id="emailContent" name="emailContent" rows="4" cols="50" required></textarea><br><br>
+
+  <button type="button" id="SoapSendEmailButton">调用SOAP发送</button>
+  <button type="button" id="RestSendEmailButton">调用REST发送</button>
+  <button type="button" id="validateEmailButton">校验邮箱</button>
+</form>
+
+<script>
+  // 获取表单元素
+  const emailForm = document.getElementById("emailForm");
+  const SoapSendEmailButton = document.getElementById("SoapSendEmailButton");
+  const RestSendEmailButton = document.getElementById("RestSendEmailButton");
+  const validateEmailButton = document.getElementById("validateEmailButton");
+
+  // 绑定按钮点击事件
+  SoapSendEmailButton.addEventListener("click", SoapSendEmail);
+  RestSendEmailButton.addEventListener("click", RestSendEmail);
+  validateEmailButton.addEventListener("click", validateEmail);
+
+  // soap发送邮件
+  function SoapSendEmail() {
+    // 获取邮箱、邮件标题和邮件内容
+    const email = document.getElementById("email").value;
+    const emailTitle = document.getElementById("emailTitle").value;
+    const emailContent = document.getElementById("emailContent").value;
+
+
+// 构建SOAP请求消息，将获取的值插入到请求体中
+    const soapRequest = `
+  <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:web="http://spring.io/guides/gs-producing-web-service">
+    <soapenv:Header/>
+    <soapenv:Body>
+      <web:sendEmailRequest>
+        <web:subject>${emailTitle}</web:subject>
+        <web:toAddress>${email}</web:toAddress>
+        <web:body>${emailContent}</web:body>
+      </web:sendEmailRequest>
+    </soapenv:Body>
+  </soapenv:Envelope>
+`;
+
+    const headers = {
+      'Content-Type': 'text/xml;charset=UTF-8',
+      'SOAPAction': 'http://spring.io/guides/gs-producing-web-service/sendEmailRequest'
+    };
+
+
+// 发送SOAP请求
+    axios.post('http://localhost:8080/ws/email', soapRequest, { headers })
+            .then((response) => {
+              // 解析SOAP响应
+              const responseBody = response.data;
+              // 处理响应数据
+              console.log(responseBody);
+              window.confirm("发送成功");
+            })
+            .catch((error) => {
+              // 处理错误
+              console.error(error);
+              window.confirm("发送失败，请重试！");
+            });
+
+    console.log("发送邮件：");
+    console.log("邮箱：" + email);
+    console.log("邮件标题：" + emailTitle);
+    console.log("邮件内容：" + emailContent);
+  }
+
+  // rest发送邮件
+  function RestSendEmail() {
+    // 获取邮箱、邮件标题和邮件内容
+    const email = document.getElementById("email").value;
+    const emailTitle = document.getElementById("emailTitle").value;
+    const emailContent = document.getElementById("emailContent").value;
+
+    $.get('http://localhost:8080/rest/email/send?toAddress='+email+'&subject='+emailTitle+'&body='+emailContent, function(data){
+      if(data===true){
+        window.confirm("发送成功");
+      } else {
+        window.confirm("发送失败，请重试！");
+      }
+    });
+  }
+
+  // 校验邮箱的函数
+  function validateEmail() {
+    // 获取邮箱、邮件标题和邮件内容
+    const email = document.getElementById("email").value;
+    $.get('http://localhost:8080/rest/email/validate?emailAddress='+email, function(data){
+      if(data===true){
+        window.confirm("邮箱格式正确");
+      } else {
+        window.confirm("邮箱格式错误，请重新输入");
+      }
+    });
+  }
+</script>
+</body>
+</html>
